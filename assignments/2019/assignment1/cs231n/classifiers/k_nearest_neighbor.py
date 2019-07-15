@@ -76,8 +76,9 @@ class KNearestNeighbor(object):
                 # not use a loop over dimension, nor use np.linalg.norm().          #
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-                pass
+                # 注: [1,2,3]**2 = [1,4,9] 所以求l2 distance可以直接两个vector相减后再平方
+                dists[i][j] = np.sqrt(np.sum((X[i] - self.X_train[j])**2))
+                #pass
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -100,8 +101,8 @@ class KNearestNeighbor(object):
             # Do not use np.linalg.norm().                                        #
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            # 在column的维度上进行sum
+            dists[i,:] = np.sqrt(np.sum((X[i] - self.X_train)**2, axis=1))
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -131,7 +132,24 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # expand equation (x-y)^2 = x^2 + y^2 - 2xy
+        #In [62]: bb                                                                                                                                                                                                              
+        #Out[62]: 
+        #array([[1],
+        #       [2]])
+
+        #In [63]: c                                                                                                                                                                                                               
+        #Out[63]: array([4, 5, 6, 7])
+
+        #In [64]: bb+c                                                                                                                                                                                                            
+        #Out[64]: 
+        #array([[5, 6, 7, 8],
+        #       [6, 7, 8, 9]])
+        dists = np.reshape(np.sum(X**2, axis=1), [num_test,1]) + np.sum(self.X_train**2, axis=1) \
+            - 2 * np.matmul(X, self.X_train.T)
+        dists = np.sqrt(dists)
+        #matmul For 2-D arrays it is the matrix product
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -163,8 +181,10 @@ class KNearestNeighbor(object):
             # Hint: Look up the function numpy.argsort.                             #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+            # np.argsort默认排序是从小到大 
+            # 另外注：self.y_train[np.argsort(dists[i])][0:k] == self.y_train[np.argsort(dists[i])[0:k]]
+            closest_y = self.y_train[np.argsort(dists[i])][0:k]
 
-            pass
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -175,8 +195,8 @@ class KNearestNeighbor(object):
             # label.                                                                #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            # bincount是将array里面所有数字出现的次数计算出来，返回的array的大小是np.bincount(x).size == np.amax(x)+1
+            y_pred[i] = np.bincount(closest_y).argmax()
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
