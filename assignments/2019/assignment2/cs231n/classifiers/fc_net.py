@@ -49,7 +49,10 @@ class TwoLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        self.params['W1'] = weight_scale * np.random.randn(input_dim, hidden_dim)
+        self.params['W2'] = weight_scale * np.random.randn(hidden_dim, num_classes)
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['b2'] = np.zeros(num_classes)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -77,13 +80,18 @@ class TwoLayerNet(object):
           names to gradients of the loss with respect to those parameters.
         """
         scores = None
+        W1 = self.params['W1']
+        W2 = self.params['W2']
+        b1 = self.params['b1']
+        b2 = self.params['b2']
         ############################################################################
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        X2,fc_relu_cache2 = affine_relu_forward(X, W1, b1)
+        scores, fc_relu_cache = affine_relu_forward(X2, W2, b2)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -106,8 +114,16 @@ class TwoLayerNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        loss,dscores = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
 
-        pass
+        dX2, dW2, db2 = affine_relu_backward(dscores, fc_relu_cache)
+        dX1, dW1, db1 = affine_relu_backward(dX2, fc_relu_cache2)
+
+        grads['W1'] = dW1 + self.reg * W1
+        grads['W2'] = dW2 + self.reg * W2
+        grads['b1'] = db1
+        grads['b2'] = db2
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################

@@ -57,15 +57,15 @@ qtconsole==4.4.3
 scipy==1.2.1
 Send2Trash==1.5.0
 six==1.12.0
-# Add this line if you want GPU support for tensorflow!
-# tensorflow-gpu==2.0.0a0
-tensorflow==2.0.0a0
-termcolor==1.1.0
-terminado==0.8.2
-testpath==0.4.2
 torch==1.0.1.post2
 torchvision==0.2.2.post3
 tornado==6.0.2
+# Add this line if you want GPU support for tensorflow!
+# tensorflow-gpu==2.0.0a0
+#tensorflow==2.0.0a0
+termcolor==1.1.0
+terminado==0.8.2
+testpath==0.4.2
 traitlets==4.3.2
 wcwidth==0.1.7
 webencodings==0.5.1
