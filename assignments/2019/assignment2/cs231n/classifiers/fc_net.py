@@ -193,8 +193,12 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        #h=np.array([1,2,3]) np.hstack([2,h,10]) == array([ 2,  1,  2,  3, 10])
+        
+        layers_dims = np.hstack([input_dim, hidden_dims, num_classes])
+        for i in range(self.num_layers):
+            self.params['W'+str(i+1)] = weight_scale * np.random.randn(layers_dims[i], layers_dims[i+1])
+            self.params['b'+str(i+1)] = np.zeros(layers_dims[i+1])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -257,7 +261,19 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        x = X
+        caches = []
+        for i in range(self.num_layers - 1): #hidden layers
+            w = self.params['W'+str(i+1)]
+            b = self.params['b'+str(i+1)]
+            #TODO other params
+            x, cache = affine_norm_relu_dropout_forward(x, w, b)
+            caches.append(cache)
+        #last layer
+        w = self.params['W' + str(self.num_layers)]
+        b = self.params['b' + str(self.num_layers)]
+        scores, cache = affine_forward(x, w, b) # 最后一层，只要affine_forward
+        caches.append(cache)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -284,11 +300,50 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss, dscores = softmax_loss(scores, y)
+        for i in range(self.num_layers):
+            w = self.params['W' + str(i+1)]
+            loss += 0.5 * self.reg * np.sum(w*w)
 
+        hidden_layer_count = self.num_layers - 1
+        
+        dout, dw, db = affine_backward(dscores, caches[self.num_layers-1])
+        grads['W' + str(self.num_layers)] = dw + self.reg * self.params['W' + str(self.num_layers)]
+        grads['b' + str(self.num_layers)] = db
+
+        for h in range(hidden_layer_count - 1, -1, -1):
+            dout, dw, db, dgamma, dbeta = affine_norm_relu_dropout_backward(dout, caches[h])
+            #TODO bn
+            grads['W' + str(h+1)] = dw + self.reg * self.params['W' + str(h+1)]
+            grads['b' + str(h+1)] = db
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
+
+#{affine - [batch/layer norm] - relu - [dropout]} 
+def affine_norm_relu_dropout_forward(x, w, b):
+    bn_cache = None
+    drop_cache = None
+    out, affine_cache = affine_forward(x, w, b)
+    #TODO bn 
+    out, relu_cache = relu_forward(out)
+    #TODO dropout
+
+    return out, (affine_cache, bn_cache, relu_cache, drop_cache)
+
+def affine_norm_relu_dropout_backward(dout, cache):
+    affine_cache, bn_cache, relu_cache, drop_cache = cache
+    dgamma, dbeta = None, None
+    #TODO dropout
+    dout = relu_backward(dout, relu_cache)
+    #TODO bn
+    dx, dw, db = affine_backward(dout, affine_cache)
+    return dx, dw, db, dgamma, dbeta
+
+
+
+
+

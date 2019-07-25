@@ -47,7 +47,12 @@ def sgd(w, dw, config=None):
 def sgd_momentum(w, dw, config=None):
     """
     Performs stochastic gradient descent with momentum.
-
+#\begin{align} 
+#\begin{split} 
+#v_t &= \gamma v_{t-1} + \eta \nabla_\theta J( \theta) \\ 
+#\theta &= \theta - v_t 
+#\end{split} 
+#\end{align}
     config format:
     - learning_rate: Scalar learning rate.
     - momentum: Scalar between 0 and 1 giving the momentum value.
@@ -67,7 +72,8 @@ def sgd_momentum(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    v = config['momentum'] * v - config['learning_rate'] * dw
+    next_w = w + v
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -83,7 +89,8 @@ def rmsprop(w, dw, config=None):
     """
     Uses the RMSProp update rule, which uses a moving average of squared
     gradient values to set adaptive per-parameter learning rates.
-
+#cache = decay_rate * cache + (1 - decay_rate) * dx**2
+#x += - learning_rate * dx / (np.sqrt(cache) + eps)
     config format:
     - learning_rate: Scalar learning rate.
     - decay_rate: Scalar between 0 and 1 giving the decay rate for the squared
@@ -105,8 +112,10 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    beta,v,eps,learning_rate = config['decay_rate'],config['cache'],config['epsilon'],config['learning_rate']
+    v = beta * v + (1-beta) * (dw * dw)
+    next_w = w - learning_rate * dw / (np.sqrt(v) + eps)
+    config['cache'] = v
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
