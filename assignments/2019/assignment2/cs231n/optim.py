@@ -47,12 +47,9 @@ def sgd(w, dw, config=None):
 def sgd_momentum(w, dw, config=None):
     """
     Performs stochastic gradient descent with momentum.
-#\begin{align} 
-#\begin{split} 
-#v_t &= \gamma v_{t-1} + \eta \nabla_\theta J( \theta) \\ 
-#\theta &= \theta - v_t 
-#\end{split} 
-#\end{align}
+# Momentum update
+v = mu * v - learning_rate * dx # integrate velocity
+x += v # integrate position
     config format:
     - learning_rate: Scalar learning rate.
     - momentum: Scalar between 0 and 1 giving the momentum value.
@@ -89,6 +86,12 @@ def rmsprop(w, dw, config=None):
     """
     Uses the RMSProp update rule, which uses a moving average of squared
     gradient values to set adaptive per-parameter learning rates.
+#cache += dx**2
+#x += - learning_rate * dx / (np.sqrt(cache) + eps)
+上面这个是adagrad；导致的结果就是gradient大的那个方向会除以一个大的数，小的除以小的数，从而平滑一点
+但是这个的问题是随着时间的推移，因为cache一直增加，会导致step越来越小；对于convex case，挺好；但是对于非convex case不好
+
+rmsprop是对adagrad的改进，加了decay 解决了step越来越小的问题
 #cache = decay_rate * cache + (1 - decay_rate) * dx**2
 #x += - learning_rate * dx / (np.sqrt(cache) + eps)
     config format:
@@ -112,10 +115,10 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    beta,v,eps,learning_rate = config['decay_rate'],config['cache'],config['epsilon'],config['learning_rate']
-    v = beta * v + (1-beta) * (dw * dw)
-    next_w = w - learning_rate * dw / (np.sqrt(v) + eps)
-    config['cache'] = v
+    decay_rate,cache,eps,learning_rate = config['decay_rate'],config['cache'],config['epsilon'],config['learning_rate']
+    cache = decay_rate * cache + (1-decay_rate) * (dw * dw)
+    next_w = w - learning_rate * dw / (np.sqrt(cache) + eps)
+    config['cache'] = cache
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -128,6 +131,17 @@ def adam(w, dw, config=None):
     """
     Uses the Adam update rule, which incorporates moving averages of both the
     gradient and its square and a bias correction term.
+
+m = beta1*m + (1-beta1)*dx
+v = beta2*v + (1-beta2)*(dx**2)
+x += - learning_rate * m / (np.sqrt(v) + eps)
+一般beta1 0.9 beta2 0.999 上面这个可能会导致第一步会很大，造成问题
+改进
+m = beta1*m + (1-beta1)*dx
+mt = m / (1-beta1**t)
+v = beta2*v + (1-beta2)*(dx**2)
+vt = v / (1-beta2**t)
+x += - learning_rate * mt / (np.sqrt(vt) + eps)
 
     config format:
     - learning_rate: Scalar learning rate.
@@ -158,8 +172,18 @@ def adam(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    eps, learning_rate = config['epsilon'], config['learning_rate']
+    beta1, beta2 = config['beta1'], config['beta2']
+    m, v, t = config['m'], config['v'], config['t']
 
+    t = t + 1
+    m = beta1*m + (1-beta1)*dw
+    mt = m / (1-beta1**t)
+    v = beta2*v + (1-beta2)*(dw**2)
+    vt = v / (1-beta2**t)
+    next_w = w - learning_rate * mt / (np.sqrt(vt) + eps)
+    
+    config['m'], config['v'], config['t'] = m, v, t
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
