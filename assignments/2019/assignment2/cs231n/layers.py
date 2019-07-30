@@ -610,7 +610,35 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_pad, w, b, conv_param = cache
+    N, F, outH, outW = dout.shape
+    N, C, Hpad, Wpad = x_pad.shape
+    FH, FW = w.shape[2], w.shape[3]
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+
+    FB = C * FH * FW
+    OB = outH * outW
+
+    dx = np.zeros((N, C, Hpad - 2*pad, Wpad - 2*pad))
+    dw, db = np.zeros(w.shape), np.zeros(b.shape)
+
+    # create w_row matrix
+    w_row = w.reshape(F, FB)                            #[F x C*FH*FW]
+    x_col = np.zeros((FB, OB))
+
+    for index in range(N):
+        out_col = dout[index].reshape((F, OB))
+        dx_cur = np.zeros((C, Hpad, Wpad))
+        dx_pad = w_row.T.dot(out_col)
+        for i in range(outH):
+            for j in range(outW):
+                x_col[:,i*outH + j] = (x_pad[index, :, i * stride:i*stride+FH, j*stride:j*stride+FW]).reshape(FB)
+                dx_cur[:, i*stride:i*stride+FH, j*stride:j*stride+FW] += (dx_pad[:,i*outH + j]).reshape(C,FH,FW)
+        dx[index] = dx_cur[:, pad:-pad, pad:-pad]
+        dw += out_col.dot(x_col.T).reshape(F, C, FH, FW)
+        db += out_col.sum(axis=1)
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
