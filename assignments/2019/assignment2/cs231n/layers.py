@@ -549,13 +549,45 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    assert(H - HH + 2*pad)%stride == 0
+    assert(W - WW + 2*pad)%stride == 0
+    outH = (int)(1+(H - HH + 2*pad)/stride)
+    outW = (int)(1+(W - WW + 2*pad)/stride)
+
+    out = np.zeros((N, F, outH, outW))
+    x_pad = np.pad(x, ((0,0),(0,0),(pad,pad),(pad,pad)), 'constant') #只pad在最后两个坐标系上
+    H_pad, W_pad = x_pad.shape[2], x_pad.shape[3]
+
+    w_row = w.reshape(F, C*HH*WW)
+    '''
+    most naive implementation
+    for index in range(N):
+        x_vol = x_pad[index]
+        for i in range(outH):
+            for j in range(outW):
+                print(index, )
+                x_part = x_vol[:,i*stride:i*stride+HH,j*stride:j*stride+WW]
+                out[index,:,i,j] = (w_row.dot(x_part.reshape(C*HH*WW,1)) + b.reshape(F, 1)).reshape((F,)) #一次更新一个深度
+    '''
+    x_col = np.zeros((C*HH*WW, outH*outW))
+    for index in range(N):
+        x_vol = x_pad[index]
+        for i in range(outH):
+            for j in range(outW):
+                x_col[:,i*outH + j] = (x_vol[:, i*stride:i*stride+HH,j*stride:j*stride+WW]).reshape((C*HH*WW,))
+        out[index] = (w_row.dot(x_col) + b.reshape(F,1)).reshape(F, outH, outW)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    cache = (x, w, b, conv_param)
+    cache = (x_pad, w, b, conv_param)
     return out, cache
 
 
