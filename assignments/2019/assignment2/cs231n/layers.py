@@ -672,7 +672,23 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    stride = pool_param['stride']
+    PH = pool_param['pool_height']
+    PW = pool_param['pool_width']
+
+    outH = int(1 + (H - PH)/stride)
+    outW = int(1 + (W - PW)/stride)
+
+    out = np.zeros((N, C, outH, outW))
+    for index in range(N):
+        out_col = np.zeros((C, outH*outW)) #一行是一个原始H*W大小channel产出的结果；每次更新，都是按column来更新的，因此命名后缀_col
+        for i in range(outH):
+            for j in range(outW):
+                pool = x[index, :, i*stride:i*stride+PH, j*stride:j*stride+PW].reshape(C,PH*PW)
+                out_col[:,i*outH+j] = pool.max(axis=1) #按深度赋值
+
+        out[index] = out_col.reshape(C, outH, outW)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -699,7 +715,31 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, pool_param = cache
+    N, C, outH, outW = dout.shape
+    H, W = x.shape[2], x.shape[3]
+    stride = pool_param['stride']
+    PH = pool_param['pool_height']
+    PW = pool_param['pool_width']
+
+    dx = np.zeros(x.shape)
+
+    for index in range(N):
+        dout_col = dout[index].reshape(C, outH*outW)
+        for i in range(outH):
+            for j in range(outW):
+                #要被传递过去的gradient值
+                dout_cur = dout_col[:, i*outH + j] #C,
+                #找到需被设置gradient的位置
+                pool = x[index, :, i*stride:i*stride+PH, j*stride:j*stride+PW].reshape(C, PH*PW)
+                indexes = pool.argmax(axis=1) #C,
+                #搞一块区域去填充
+                dpool = np.zeros(pool.shape) #C,PH*PW
+                dpool[np.arange(C), indexes] = dout_cur
+                #给dx
+                dx[index, :, i*stride:i*stride+PH, j*stride:j*stride+PW] += dpool.reshape(C,PH, PW)
+
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
