@@ -785,7 +785,46 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     x = x.transpose(0, 3, 2, 1).reshape(N * W * H, C) #想要reshape，数据的分布得对应的上
     out, cache = batchnorm_forward(x, gamma, beta, bn_param)
     out = out.reshape(N, W, H, C).transpose(0, 3, 2, 1)
+'''
+In [306]: x                                                                                                                                                                                                              
+Out[306]: 
+array([[[ 1,  2,  3],
+        [ 4,  5,  6]],
 
+       [[ 7,  8,  9],
+        [10, 11, 12]]])
+
+In [307]: x.shape                                                                                                                                                                                                        
+Out[307]: (2, 2, 3)
+
+In [308]: y=x.transpose(2,1,0)                                                                                                                                                                                           
+
+In [309]: y                                                                                                                                                                                                              
+Out[309]: 
+array([[[ 1,  7],
+        [ 4, 10]],
+
+       [[ 2,  8],
+        [ 5, 11]],
+
+       [[ 3,  9],
+        [ 6, 12]]])
+
+In [310]: y.shape                                                                                                                                                                                                        
+Out[310]: (3, 2, 2)
+
+In [311]: z=y.reshape(6,2)                                                                                                                                                                                               
+
+In [312]: z                                                                                                                                                                                                              
+Out[312]: 
+array([[ 1,  7],
+       [ 4, 10],
+       [ 2,  8],
+       [ 5, 11],
+       [ 3,  9],
+       [ 6, 12]])
+z 这里去batchnormal
+'''
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
