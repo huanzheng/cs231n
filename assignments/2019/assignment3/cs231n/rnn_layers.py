@@ -301,7 +301,16 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, H = prev_h.shape
+    h = x.dot(Wx) + prev_h.dot(Wh) + b
+    h[:,0:3*H] = sigmoid(h[:,0:3*H])
+    h[:,3*H:4*H] = np.tanh(h[:,3*H:4*H])
+    i,f,o,g = h[:,0:H],h[:,H:2*H],h[:,2*H:3*H],h[:,3*H:4*H]
+
+    next_c = prev_c * f + i * g
+    next_c_tanh = np.tanh(next_c)
+    next_h = o * next_c_tanh
+    cache = (x, prev_h, prev_c, Wx, Wh, b, h, next_c_tanh)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -337,7 +346,34 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, H = dnext_h.shape
+    x, prev_h, prev_c, Wx, Wh, b, h, next_c_tanh = cache
+    i, f, o, g = h[:,:H], h[:,H:2*H], h[:,2*H:3*H], h[:,3*H:4*H]
+
+    difog = h.copy()
+
+    #local gradients
+    #sigmoid
+    difog[:,:3*H] = difog[:,:3*H] * (1 - difog[:,:3*H])
+    #tanh
+    difog[:,3*H:4*H] = 1 - difog[:,3*H:4*H]**2
+    dnc_tanh = 1 - next_c_tanh**2
+
+    #total gradients below
+    dnc_prod = dnext_h * o * dnc_tanh + dnext_c #f*prev_c + i*g = next_c的total gradient
+
+    difog[:,:H] *= dnc_prod * g
+    difog[:,H:2*H] *= dnc_prod * prev_c
+    difog[:,2*H:3*H] *= dnext_h * next_c_tanh
+    difog[:,3*H:4*H] *= dnc_prod * i
+
+    dx = difog.dot(Wx.T)
+    dWx = x.T.dot(difog)
+    dprev_h = difog.dot(Wh.T)
+    dWh = prev_h.T.dot(difog)
+    db = difog.sum(axis=0)
+    dprev_c = dnc_prod * f
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -376,7 +412,18 @@ def lstm_forward(x, h0, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, D = x.shape #x[n] 存的是x_n在所有timestep的输入
+    H = h0.shape[1]
+
+    h = np.zeros((N, T, H))
+    cache = []
+    prev_h = h0
+    prev_c = np.zeros(h0.shape)
+    
+    for i in range(T):
+        prev_h, prev_c, cache_h = lstm_step_forward(x[:,i,:], prev_h, prev_c,Wx, Wh, b)
+        h[:,i,:] = prev_h
+        cache.append(cache_h)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -408,7 +455,24 @@ def lstm_backward(dh, cache):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, H = dh.shape
+    dprev_h = np.zeros((N, H))
+    dprev_c = np.zeros((N, H))
+
+    #hidden state 出去了两部分，一部分为next hidden state做贡献；一部分为当前hidden state的output做贡献
+    dxl, dprev_h, dprev_c, dWx, dWh, db = lstm_step_backward(dh[:,T-1,:] + dprev_h, dprev_c, cache[T-1])
+    D = dxl.shape[1] #主要是为了拿这个D
+
+    dx = np.zeros((N,T,D))
+    dx[:,T-1,:] = dxl
+
+    for i in range(T-2, -1, -1):
+        dxl, dprev_h, dprev_c, dWxc, dWhc, dbc = lstm_step_backward(dh[:,i,:] + dprev_h, dprev_c, cache[i])
+        dx[:,i,:] = dxl
+        dWx += dWxc
+        dWh += dWhc
+        db += dbc
+    dh0 = dprev_h
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################

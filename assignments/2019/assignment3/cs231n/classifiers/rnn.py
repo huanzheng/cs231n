@@ -178,7 +178,7 @@ class CaptioningRNN(object):
         if self.cell_type == 'rnn':
             h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)        #N*T*H
         else:
-            h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)        #N*T*H
+            h, cache_rnn = lstm_forward(x, h0, Wx, Wh, b)        #N*T*H
 
         scores, scores_cache = temporal_affine_forward(h, W_vocab, b_vocab)     #N*T*V
         
@@ -192,7 +192,7 @@ class CaptioningRNN(object):
         if self.cell_type == 'rnn':
             dx, dh0, dWx, dWh, db = rnn_backward(dh, cache_rnn)
         else:
-            dx, dh0, dWx, dWh, db = rnn_backward(dh, cache_rnn)
+            dx, dh0, dWx, dWh, db = lstm_backward(dh, cache_rnn)
         
         #need dx dh0
         dW_embed = word_embedding_backward(dx, cache_we)
@@ -270,6 +270,7 @@ class CaptioningRNN(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         h0 = features.dot(W_proj) + b_proj
+        c0 = np.zeros(h0.shape)
         V, W = W_embed.shape
         x = np.ones((N,W)) * W_embed[self._start] #每次的输入；初始值是start
 
@@ -277,7 +278,8 @@ class CaptioningRNN(object):
             if self.cell_type == 'rnn':
                 next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
             else:
-                next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
+                next_h, next_c, _ = lstm_step_forward(x, h0, c0, Wx, Wh, b)
+                c0 = next_c
 
             scores = next_h.dot(W_vocab) + b_vocab
             max_indices = scores.argmax(axis=1)
