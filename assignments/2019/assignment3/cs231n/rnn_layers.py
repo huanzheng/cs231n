@@ -113,7 +113,7 @@ def rnn_forward(x, h0, Wx, Wh, b):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    N, T, D = x.shape
+    N, T, D = x.shape #x[n] 存的是x_n在所有timestep的输入
     H = h0.shape[1]
 
     h = np.zeros((N, T, H))

@@ -99,6 +99,36 @@ class CaptioningRNN(object):
         captions_in = captions[:, :-1]
         captions_out = captions[:, 1:]
 
+        '''
+        一个captions的例子
+        print(captions)
+        [[  1   4 122  44   9   3   6   3   3   2   0   0   0   0   0   0   0]
+         [  1   4  12 292   9  40 236 628   8  44   3   9 318   2   0   0   0]
+         [  1   4 138  36   6   4  51   5   7 208  38   4  24   2   0   0   0]
+         [  1   4 101   6   4 186  27   4 206   2   0   0   0   0   0   0   0]
+         [  1   4 269  47 109   3   9  81 109 269 314  10 461   3   2   0   0]
+         [  1  94 295   3   8   4 315   6  52   2   0   0   0   0   0   0   0]
+         [  1   4  34   6  19  26  20  14  38  45 203   2   0   0   0   0   0]
+         [  1   4  47  54   7   3 441   8 141 129   2   0   0   0   0   0   0]
+         [  1   4  12 109  18   4 900  24  38   4 166 675   2   0   0   0   0]
+         [  1   4 346 636 105   7 123   8   7 837   2   0   0   0   0   0   0]
+         [  1 136  19  17  38 677   6 136 467   2   0   0   0   0   0   0   0]
+         [  1   4 615   6   4  23  97   7   3  13   3   2   0   0   0   0   0]
+         [  1   4  12  17   5   7  69   6   4  85   9 653   6 245   2   0   0]
+         [  1 303   3 701   3  38   4   3 812 559   2   0   0   0   0   0   0]
+         [  1   4  62   9 753 484  10   4 873  93   7   3 410   6   7 296   2]
+         [  1   4  12 292   9  40 236 628   8  44   3   9 318   2   0   0   0]
+         [  1   4 180  26  11 350  13 648 214  82   2   0   0   0   0   0   0]
+         [  1   4  79  14   9   3   5   9   4 520   8  40 191   2   0   0   0]
+         [  1   7  49 430  20  57   4  92   6   3   2   0   0   0   0   0   0]
+         [  1   4 331   9   4 674   3  10  48 484   2   0   0   0   0   0   0]
+         [  1  94 295   3   8   4 315   6  52   2   0   0   0   0   0   0   0]
+         [  1   4 503  11 280  93   7 354 121   2   0   0   0   0   0   0   0]
+         [  1   4 101   6   4 186  27   4 206   2   0   0   0   0   0   0   0]
+         [  1   4  79  11 280   8   7 123   5  40  86   2   0   0   0   0   0]
+         [  1  65  11   4 367 364 458  87   6   7  52   2   0   0   0   0   0]]
+        '''
+
         # You'll need this
         mask = (captions_out != self._null)
 
@@ -142,8 +172,36 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0 = features.dot(W_proj) + b_proj                              #N*H
+        x, cache_we = word_embedding_forward(captions_in, W_embed)      #N*T*W 其实是T-1;以下都是
+        
+        if self.cell_type == 'rnn':
+            h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)        #N*T*H
+        else:
+            h, cache_rnn = rnn_forward(x, h0, Wx, Wh, b)        #N*T*H
 
+        scores, scores_cache = temporal_affine_forward(h, W_vocab, b_vocab)     #N*T*V
+        
+
+        loss, dout = temporal_softmax_loss(scores, captions_out, mask, verbose=False)
+
+
+        dh, dW_vocab, db_vocab = temporal_affine_backward(dout, scores_cache)
+
+        #need dh
+        if self.cell_type == 'rnn':
+            dx, dh0, dWx, dWh, db = rnn_backward(dh, cache_rnn)
+        else:
+            dx, dh0, dWx, dWh, db = rnn_backward(dh, cache_rnn)
+        
+        #need dx dh0
+        dW_embed = word_embedding_backward(dx, cache_we)
+
+        dW_proj = features.T.dot(dh0)
+        db_proj = dh0.sum(axis=0)
+
+        grads = {'W_vocab':dW_vocab, 'b_vocab':db_vocab, 'Wx':dWx, 'Wh':dWh, 
+                 'b':db, 'W_embed':dW_embed, 'W_proj':dW_proj, 'b_proj':db_proj}
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -211,8 +269,21 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0 = features.dot(W_proj) + b_proj
+        V, W = W_embed.shape
+        x = np.ones((N,W)) * W_embed[self._start] #每次的输入；初始值是start
 
+        for i in range(max_length):
+            if self.cell_type == 'rnn':
+                next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
+            else:
+                next_h, _ = rnn_step_forward(x, h0, Wx, Wh, b)
+
+            scores = next_h.dot(W_vocab) + b_vocab
+            max_indices = scores.argmax(axis=1)
+            captions[:,i] = max_indices
+            x = W_embed[max_indices]
+            h0 = next_h
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
