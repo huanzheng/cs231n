@@ -1,7 +1,7 @@
 import tensorflow as tf
+#https://arxiv.org/pdf/1602.07360.pdf https://zhuanlan.zhihu.com/p/49465950
 
 NUM_CLASSES = 1000
-
 class Fire(tf.keras.Model):
     def __init__(self, inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes,name=None):
         super(Fire, self).__init__(name='%s/fire'%name)
